@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#2f4736">
+    <meta name="description" content="Private gemeinsame Reisekasse für unsere Mallorca-Reise.">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net; img-src 'self' data: https://*.supabase.co; style-src 'self' 'unsafe-inline'; font-src 'self'; base-uri 'self'; form-action 'self'">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232f4736'/%3E%3Cpath d='M16 45V18h7l9 15 9-15h7v27h-7V29l-9 14-9-14v16z' fill='%23f7f2e8'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="./css/styles.css">
+    <title>Mallorca-Kasse</title>
+  </head>
+  <body>
+    <div id="offline-banner" class="offline-banner" role="status" hidden>
+      Du bist offline. Neue Ausgaben können erst wieder online gespeichert werden.
+    </div>
+
+    <main id="login-view" class="login-layout">
+      <section class="login-card" aria-labelledby="login-title">
+        <div class="login-mark" aria-hidden="true">MK</div>
+        <p class="eyebrow">Unsere Reise · privat</p>
+        <h1 id="login-title">Mallorca-Kasse</h1>
+        <p class="login-copy">Melde dich mit deiner eingerichteten E-Mail-Adresse an.</p>
+
+        <div id="setup-notice" class="notice notice--setup" hidden>
+          <strong>Die App ist noch nicht verbunden.</strong>
+          <span>Trage zuerst die zwei Supabase-Werte in <code>js/config.js</code> ein. Die README führt dich Schritt für Schritt durch die Einrichtung.</span>
+        </div>
+
+        <form id="login-form" class="login-form" novalidate>
+          <label for="login-email">E-Mail-Adresse</label>
+          <input id="login-email" name="email" type="email" autocomplete="email" inputmode="email" required>
+
+          <label for="login-password">Passwort</label>
+          <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+
+          <p id="login-error" class="field-error" role="alert" hidden></p>
+          <button id="login-button" class="button button--primary button--full" type="submit">Anmelden</button>
+        </form>
+        <p class="privacy-note">Keine Werbung, kein Tracking, keine öffentlich gespeicherten Reisefotos.</p>
+      </section>
+    </main>
+
+    <div id="app-view" class="app" hidden>
+      <header class="app-header">
+        <div id="hero-photo" class="hero-photo" role="img" aria-label="Yvonne, Alice, Birgit und Svenja auf Mallorca">
+          <div id="hero-placeholder" class="hero-placeholder">
+            <span aria-hidden="true">✦</span>
+            <p>Das private Gruppenfoto erscheint nach der Einrichtung des geschützten Speichers.</p>
+          </div>
+          <div class="hero-shade"></div>
+          <div class="hero-title">
+            <p>Unsere gemeinsame Reisekasse</p>
+            <h1>Mallorca-Kasse</h1>
+          </div>
+        </div>
+
+        <div class="session-bar">
+          <div>
+            <span class="session-label">Angemeldet als</span>
+            <strong id="session-name">—</strong>
+          </div>
+          <button id="logout-button" class="text-button" type="button">Abmelden</button>
+        </div>
+      </header>
+
+      <main class="content" tabindex="-1">
+        <section id="access-view" class="empty-state" hidden>
+          <div class="empty-state__icon" aria-hidden="true">!</div>
+          <h2>Zugang noch nicht zugeordnet</h2>
+          <p>Dieses Konto ist angemeldet, aber noch keiner der vier Teilnehmerinnen zugeordnet. Prüfe den Schritt „Konten zuordnen“ in der README.</p>
+        </section>
+
+        <section id="overview-screen" class="screen" data-screen="overview" aria-labelledby="overview-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Aktueller Stand</p>
+              <h2 id="overview-title">Übersicht</h2>
+            </div>
+            <span id="sync-status" class="sync-status">Aktuell</span>
+          </div>
+
+          <div id="balance-grid" class="balance-grid" aria-live="polite"></div>
+
+          <article class="total-card">
+            <div>
+              <span>Gemeinsam ausgegeben</span>
+              <strong id="overview-total">0,00 €</strong>
+            </div>
+            <div class="total-card__mark" aria-hidden="true">€</div>
+          </article>
+
+          <button id="overview-add-button" class="button button--primary button--full button--large" type="button">
+            <span aria-hidden="true">＋</span> Ausgabe hinzufügen
+          </button>
+
+          <div class="subsection-heading">
+            <h3>Letzte Ausgaben</h3>
+            <button class="text-button" type="button" data-go-to="expenses">Alle anzeigen</button>
+          </div>
+          <div id="recent-expenses" class="expense-list"></div>
+        </section>
+
+        <section id="expense-screen" class="screen" data-screen="expense" aria-labelledby="expense-title" hidden>
+          <div class="section-heading">
+            <div>
+              <p id="expense-kicker" class="eyebrow">In wenigen Sekunden</p>
+              <h2 id="expense-title">Ausgabe hinzufügen</h2>
+            </div>
+            <button id="cancel-edit-button" class="text-button" type="button" hidden>Abbrechen</button>
+          </div>
+
+          <form id="expense-form" class="expense-form" novalidate>
+            <div class="form-block form-block--amount">
+              <label for="expense-amount">Betrag</label>
+              <div class="amount-input">
+                <input id="expense-amount" name="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00" aria-describedby="amount-error" required>
+                <span aria-hidden="true">€</span>
+              </div>
+              <p id="amount-error" class="field-error" role="alert" hidden></p>
+            </div>
+
+            <div class="form-block">
+              <label for="expense-description">Beschreibung</label>
+              <input id="expense-description" name="description" type="text" maxlength="120" autocomplete="off" placeholder="z. B. Abendessen" aria-describedby="description-error" required>
+              <p id="description-error" class="field-error" role="alert" hidden></p>
+            </div>
+
+            <fieldset class="form-block">
+              <legend>Wer hat bezahlt?</legend>
+              <div id="payer-options" class="person-options person-options--radio"></div>
+              <p id="payer-error" class="field-error" role="alert" hidden></p>
+            </fieldset>
+
+            <fieldset class="form-block">
+              <legend>Für wen?</legend>
+              <p class="field-hint">Standardmäßig sind alle dabei.</p>
+              <div id="beneficiary-options" class="person-options"></div>
+              <p id="beneficiary-error" class="field-error" role="alert" hidden></p>
+            </fieldset>
+
+            <p id="form-error" class="form-message form-message--error" role="alert" hidden></p>
+            <button id="save-expense-button" class="button button--primary button--full button--large" type="submit">Ausgabe speichern</button>
+          </form>
+        </section>
+
+        <section id="expenses-screen" class="screen" data-screen="expenses" aria-labelledby="expenses-title" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Neueste zuerst</p>
+              <h2 id="expenses-title">Ausgaben</h2>
+            </div>
+            <strong id="expense-count" class="count-badge">0</strong>
+          </div>
+          <div id="all-expenses" class="expense-list expense-list--all"></div>
+        </section>
+
+        <section id="settlement-screen" class="screen" data-screen="settlement" aria-labelledby="settlement-title" hidden>
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Zum Abschluss</p>
+              <h2 id="settlement-title">Abrechnung</h2>
+            </div>
+          </div>
+
+          <article class="total-card total-card--compact">
+            <div>
+              <span>Gesamtausgaben</span>
+              <strong id="settlement-total">0,00 €</strong>
+            </div>
+          </article>
+
+          <div class="subsection-heading">
+            <h3>Aktuelle Salden</h3>
+          </div>
+          <div id="settlement-balances" class="settlement-balances"></div>
+
+          <div class="subsection-heading settlement-heading">
+            <div>
+              <h3>Wer überweist wem?</h3>
+              <p>Möglichst wenige Zahlungen, auf den Cent genau.</p>
+            </div>
+          </div>
+          <div id="settlement-list" class="settlement-list"></div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="Hauptnavigation">
+        <button class="nav-button is-active" type="button" data-screen-target="overview" aria-current="page">
+          <span class="nav-icon" aria-hidden="true">⌂</span>
+          <span>Übersicht</span>
+        </button>
+        <button class="nav-button" type="button" data-screen-target="expense">
+          <span class="nav-icon" aria-hidden="true">＋</span>
+          <span>Ausgabe</span>
+        </button>
+        <button class="nav-button" type="button" data-screen-target="expenses">
+          <span class="nav-icon" aria-hidden="true">≡</span>
+          <span>Ausgaben</span>
+        </button>
+        <button class="nav-button" type="button" data-screen-target="settlement">
+          <span class="nav-icon" aria-hidden="true">↔</span>
+          <span>Abrechnung</span>
+        </button>
+      </nav>
+    </div>
+
+    <dialog id="delete-dialog" class="dialog">
+      <form method="dialog" class="dialog-card">
+        <div class="dialog-icon" aria-hidden="true">?</div>
+        <h2>Diese Ausgabe wirklich löschen?</h2>
+        <p>Die Salden werden danach sofort neu berechnet.</p>
+        <div class="dialog-actions">
+          <button class="button button--secondary" value="cancel">Abbrechen</button>
+          <button id="confirm-delete-button" class="button button--danger" value="confirm">Löschen</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>
